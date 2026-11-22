@@ -6,7 +6,6 @@ import { createClient } from '@/lib/supabase/server';
 export async function createVoucher(formData: FormData) {
   const supabase = await createClient();
 
-  // Controleer of de gebruiker bank_admin is
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -24,12 +23,20 @@ export async function createVoucher(formData: FormData) {
 
   const email = (formData.get('email') as string)?.trim().toLowerCase();
   const fullName = (formData.get('full_name') as string)?.trim();
+  const accountNumber = (formData.get('account_number') as string)?.trim();
   const initialAmount = parseFloat(formData.get('initial_amount') as string);
   const expiryMonths = parseInt(formData.get('expiry_months') as string, 10) || 12;
 
-  if (!email || !fullName || isNaN(initialAmount) || initialAmount <= 0) {
+  // Validatie
+  if (!email || !fullName || !accountNumber || isNaN(initialAmount) || initialAmount <= 0) {
     return { error: 'Vul alle velden correct in' };
   }
+
+  if (!/^561431\d{10}$/.test(accountNumber)) {
+    return { error: 'Rekeningnummer moet 16 cijfers zijn en beginnen met 561431' };
+  }
+
+  const accountLastFour = accountNumber.slice(-4);
 
   // Zoek de customer op basis van e-mail
   const { data: customerProfile } = await supabase
@@ -45,9 +52,33 @@ export async function createVoucher(formData: FormData) {
     };
   }
 
+  // Controleer of het rekeningnummer al in gebruik is
+  const { data: existingAccount } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('account_number', accountNumber)
+    .maybeSingle();
+
+  if (existingAccount) {
+    return { error: 'Dit rekeningnummer is al gekoppeld aan een andere klant' };
+  }
+
   // Berekening verloopdatum
   const expiresAt = new Date();
   expiresAt.setMonth(expiresAt.getMonth() + expiryMonths);
+
+  // Update profiel met rekeningnummer
+  const { error: profileError } = await supabase
+    .from('profiles')
+    .update({
+      account_number: accountNumber,
+      account_last_four: accountLastFour,
+    })
+    .eq('id', customerProfile.id);
+
+  if (profileError) {
+    return { error: profileError.message };
+  }
 
   // Maak voucher aan
   const { data: voucher, error: insertError } = await supabase
@@ -77,6 +108,7 @@ export async function createVoucher(formData: FormData) {
     metadata: {
       initial_amount: initialAmount,
       customer_email: email,
+      account_number: accountNumber,
       expires_at: expiresAt.toISOString(),
     },
   });

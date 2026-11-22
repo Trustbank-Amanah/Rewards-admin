@@ -3,6 +3,8 @@ import CreateVoucherForm from './create-voucher-form';
 import VouchersTable from './vouchers-table';
 
 
+export const instant = false;
+
 export default async function VouchersPage() {
   const supabase = await createClient();
 

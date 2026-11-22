@@ -1,5 +1,7 @@
 import ImportForm from './import-form';
 
+export const instant = false;
+
 export default function ImportPage() {
   return (
     <div className="space-y-6">

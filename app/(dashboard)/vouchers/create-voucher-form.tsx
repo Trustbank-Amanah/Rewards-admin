@@ -6,6 +6,10 @@ import { createVoucher } from './actions';
 export default function CreateVoucherForm() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [accountNumber, setAccountNumber] = useState('');
+
+  const lastFour = accountNumber.slice(-4);
+  const isValidAccount = /^561431\d{10}$/.test(accountNumber);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -24,6 +28,7 @@ export default function CreateVoucherForm() {
         text: `Voucher ${result.voucherNumber} aangemaakt voor de klant.`,
       });
       form.reset();
+      setAccountNumber('');
     }
     setLoading(false);
   }
@@ -74,6 +79,37 @@ export default function CreateVoucherForm() {
           />
         </div>
 
+        <div className="md:col-span-2">
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Rekeningnummer (16 cijfers)
+          </label>
+          <input
+            name="account_number"
+            type="text"
+            inputMode="numeric"
+            value={accountNumber}
+            onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, '').slice(0, 16))}
+            required
+            placeholder="5614311234567890"
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm font-mono focus:outline-none focus:ring-2 focus:ring-slate-900"
+          />
+          <p className="text-xs text-slate-500 mt-1">
+            Moet beginnen met 561431. De laatste 4 cijfers worden gebruikt voor login.
+          </p>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium text-slate-700 mb-1">
+            Laatste 4 cijfers
+          </label>
+          <input
+            type="text"
+            value={lastFour || '—'}
+            readOnly
+            className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm bg-slate-50 text-slate-600"
+          />
+        </div>
+
         <div>
           <label className="block text-sm font-medium text-slate-700 mb-1">
             Initieel punten
@@ -108,11 +144,16 @@ export default function CreateVoucherForm() {
       <div className="mt-4">
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !isValidAccount}
           className="bg-slate-900 text-white px-6 py-2.5 rounded-lg text-sm font-semibold hover:bg-slate-800 disabled:opacity-50 transition"
         >
           {loading ? 'Bezig...' : 'Voucher aanmaken'}
         </button>
+        {!isValidAccount && accountNumber.length > 0 && (
+          <p className="text-xs text-amber-600 mt-2">
+            Rekeningnummer moet 16 cijfers zijn en beginnen met 561431
+          </p>
+        )}
       </div>
     </form>
   );

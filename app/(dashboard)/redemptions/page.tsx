@@ -1,6 +1,8 @@
 import { createClient } from '@/lib/supabase/server';
 import RequestsTable from './requests-table';
 
+export const instant = false;
+
 export default async function RedemptionsPage() {
   const supabase = await createClient();
 
