@@ -117,6 +117,41 @@ export async function createVoucher(formData: FormData) {
   return { success: true, voucherNumber: voucher.voucher_number };
 }
 
+export async function addPointsToVoucher(
+  voucherNumber: string,
+  points: number,
+  reason: string
+) {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return { error: 'Niet ingelogd' };
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single();
+
+  if (profile?.role !== 'bank_admin') {
+    return { error: 'Geen admin-rechten' };
+  }
+
+  const { data, error } = await supabase.rpc('admin_add_customer_points', {
+    p_voucher_number: voucherNumber,
+    p_points: points,
+    p_reason: reason,
+  });
+
+  if (error) return { error: error.message };
+
+  revalidatePath('/vouchers');
+  revalidatePath('/dashboard');
+  return { success: true, data };
+}
+
 export async function deactivateVoucher(voucherId: string) {
   const supabase = await createClient();
 
